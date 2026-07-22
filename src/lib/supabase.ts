@@ -33,5 +33,5 @@ export type FabricInsert = {
 
 export type FabricUpdate = Partial<FabricInsert>;
 
-export const FABRIC_TYPES = ['Cotton', 'Linen', 'Silk', 'Rayon', 'Wool', 'Blend'] as const;
+export const FABRIC_TYPES = ['Cotton', 'Linen', 'Silk', 'Rayon', 'Wool', 'Blend', 'TR', 'japanes', 'korian', 'velvet','jaquard'] as const;
 export const LOCATIONS = ['Shop Floor', 'Office', 'Godown'] as const;

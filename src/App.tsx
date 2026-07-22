@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Search, Plus, SlidersHorizontal, X, Shirt, Eye, Pencil, Package } from 'lucide-react';
+import { Search, Plus, SlidersHorizontal, X, Shirt, Eye, Pencil, Package, MapPin, Ruler, Calendar, ImageIcon } from 'lucide-react';
 import { useFabrics } from './hooks/useFabrics';
 import { useRole, RoleProvider, type Role } from './lib/role-context';
 import { FabricCard, FabricCardSkeleton } from './components/FabricCard';
@@ -24,6 +24,7 @@ function AppInner() {
   const [showFilters, setShowFilters] = useState(false);
   const [editing, setEditing] = useState<Fabric | null>(null);
   const [showAdd, setShowAdd] = useState(false);
+  const [viewing, setViewing] = useState<Fabric | null>(null);
 
   const types = useMemo(() => Array.from(new Set(fabrics.map((f) => f.type))).sort(), [fabrics]);
   const locations = useMemo(() => Array.from(new Set(fabrics.map((f) => f.location))).sort(), [fabrics]);
@@ -64,7 +65,7 @@ function AppInner() {
                 <Shirt className="h-5 w-5" />
               </div>
               <div>
-                <h1 className="text-base font-bold leading-tight text-stone-900">Fabric Inventory</h1>
+                <h1 className="text-base font-bold leading-tight text-stone-900">Klick Fabric Inventory</h1>
                 <p className="text-[11px] leading-tight text-stone-500">Menswear Retail Tracker</p>
               </div>
             </div>
@@ -159,7 +160,12 @@ function AppInner() {
                 </div>
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
                   {items.map((f) => (
-                    <FabricCard key={f.id} fabric={f} onEdit={(fab) => setEditing(fab)} />
+                    <FabricCard
+                      key={f.id}
+                      fabric={f}
+                      onEdit={(fab) => setEditing(fab)}
+                      onView={(fab) => setViewing(fab)}
+                    />
                   ))}
                 </div>
               </section>
@@ -181,6 +187,126 @@ function AppInner() {
 
       {showAdd && <FabricFormModal fabric={null} onClose={() => setShowAdd(false)} onSaved={refetch} />}
       {editing && <FabricFormModal fabric={editing} onClose={() => setEditing(null)} onSaved={refetch} />}
+      {viewing && (
+        <FabricDetailModal
+          fabric={viewing}
+          onClose={() => setViewing(null)}
+          onEdit={
+            isEditor
+              ? () => {
+                  setEditing(viewing);
+                  setViewing(null);
+                }
+              : undefined
+          }
+        />
+      )}
+    </div>
+  );
+}
+
+function FabricDetailModal({
+  fabric,
+  onClose,
+  onEdit,
+}: {
+  fabric: Fabric;
+  onClose: () => void;
+  onEdit?: () => void;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-stone-900/40 backdrop-blur-sm sm:items-center"
+      onClick={onClose}
+    >
+      <div
+        className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-t-2xl bg-white shadow-2xl sm:rounded-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Photo */}
+        <div className="relative aspect-[4/3] w-full overflow-hidden bg-stone-100">
+          {fabric.photo_url ? (
+            <img src={fabric.photo_url} alt={fabric.name} className="h-full w-full object-cover" />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center text-stone-300">
+              <ImageIcon className="h-14 w-14" />
+            </div>
+          )}
+          <button
+            onClick={onClose}
+            className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-stone-700 shadow-md hover:bg-white"
+            aria-label="Close"
+          >
+            <X className="h-5 w-5" />
+          </button>
+          <div className="absolute left-3 top-3 rounded-full bg-stone-900/80 px-2.5 py-1 text-xs font-semibold tracking-wide text-white backdrop-blur-sm">
+            {fabric.fabric_code}
+          </div>
+        </div>
+
+        {/* Body */}
+        <div className="p-5">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h2 className="text-xl font-bold text-stone-900">{fabric.name}</h2>
+              <p className="mt-0.5 text-sm text-stone-500">{fabric.type}</p>
+            </div>
+          </div>
+
+          {/* Available Mtr */}
+          <div className="mt-4 rounded-xl bg-stone-50 p-4 ring-1 ring-stone-200/70">
+            <p className="text-xs font-medium uppercase tracking-wide text-stone-400">Available</p>
+            <p className="mt-1 text-3xl font-bold leading-tight text-stone-900">
+              {Number(fabric.available_mtr).toFixed(2)}
+              <span className="ml-1.5 text-base font-normal text-stone-500">mtr</span>
+            </p>
+          </div>
+
+          {/* Details */}
+          <div className="mt-4 space-y-3 border-t border-stone-100 pt-4 text-sm text-stone-600">
+            <div className="flex items-center gap-2.5">
+              <MapPin className="h-4 w-4 shrink-0 text-stone-400" />
+              <span>{fabric.location}</span>
+            </div>
+            {fabric.width && (
+              <div className="flex items-center gap-2.5">
+                <Ruler className="h-4 w-4 shrink-0 text-stone-400" />
+                <span>{fabric.width}</span>
+              </div>
+            )}
+            <div className="flex items-center gap-2.5">
+              <Calendar className="h-4 w-4 shrink-0 text-stone-400" />
+              <span>
+                Updated{' '}
+                {new Date(fabric.last_updated).toLocaleDateString('en-US', {
+                  month: 'short',
+                  day: 'numeric',
+                  year: 'numeric',
+                })}
+              </span>
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="mt-5 flex items-center gap-3">
+            <button
+              onClick={onClose}
+              className="flex-1 rounded-lg border border-stone-300 bg-white px-4 py-2.5 text-sm font-semibold text-stone-600 transition hover:bg-stone-100"
+            >
+              Close
+            </button>
+            {onEdit && (
+              <button
+                onClick={onEdit}
+                className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-stone-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-stone-800"
+              >
+                <Pencil className="h-4 w-4" />
+                Edit
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

@@ -15,13 +15,17 @@ function formatDate(d: string): string {
 type Props = {
   fabric: Fabric;
   onEdit: (f: Fabric) => void;
+  onView: (f: Fabric) => void;
 };
 
-export function FabricCard({ fabric, onEdit }: Props) {
+export function FabricCard({ fabric, onEdit, onView }: Props) {
   const { isEditor } = useRole();
 
   return (
-    <div className="group relative overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-stone-200/70 transition-all duration-300 hover:shadow-md hover:ring-stone-300">
+    <div
+      onClick={() => onView(fabric)}
+      className="group relative cursor-pointer overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-stone-200/70 transition-all duration-300 hover:shadow-md hover:ring-stone-300"
+    >
       {/* Photo */}
       <div className="relative aspect-[4/3] overflow-hidden bg-stone-100">
         {fabric.photo_url ? (
@@ -86,7 +90,10 @@ export function FabricCard({ fabric, onEdit }: Props) {
       {/* Edit button — editor only */}
       {isEditor && (
         <button
-          onClick={() => onEdit(fabric)}
+          onClick={(e) => {
+            e.stopPropagation();
+            onEdit(fabric);
+          }}
           className="absolute bottom-3 right-3 flex h-9 w-9 items-center justify-center rounded-full bg-stone-900 text-white shadow-lg transition-transform hover:scale-110 active:scale-95"
           aria-label="Edit fabric"
         >
@@ -112,5 +119,3 @@ export function FabricCardSkeleton() {
     </div>
   );
 }
-
-
