@@ -1,0 +1,89 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+
+  /* Premium palette — deep charcoal ink + warm brass accent, richer than flat stone */
+  --surface: #fdf3ece9;
+  --surface-elevated: hsl(0, 2%, 72%);
+  --ink-900: #1f1512;
+  --ink-700: #4a352c;
+  --ink-500: #8a7168;
+  --ink-300: #e2cfc4;
+  --hairline: rgba(31, 21, 18, 0.08);
+
+  --accent: #c1602f;        /* terracotta — primary accent */
+  --accent-deep: #9c4c24;   /* deeper terracotta for gradients/hover */
+  --accent-soft: #f8ddce;   /* blush wash for badges/backgrounds */
+  --accent-ring: rgba(193, 96, 47, 0.25);
+
+  --shadow-sm: 0 1px 2px rgba(31, 21, 18, 0.05), 0 1px 1px rgba(31, 21, 18, 0.03);
+  --shadow-md: 0 6px 16px rgba(31, 21, 18, 0.07), 0 1px 3px rgba(31, 21, 18, 0.05);
+  --shadow-lg: 0 16px 40px rgba(31, 21, 18, 0.12), 0 3px 8px rgba(31, 21, 18, 0.06);
+  --shadow-glow: 0 0 0 1px rgba(193, 96, 47, 0.18), 0 10px 28px rgba(31, 21, 18, 0.12);
+}
+
+body {
+  background:
+    radial-gradient(1200px 700px at 0% -10%, rgba(198, 93, 52, 0.32), transparent 55%),
+    radial-gradient(1000px 650px at 100% 0%, rgba(240, 150, 120, 0.30), transparent 55%),
+    radial-gradient(900px 700px at 50% 100%, rgba(214, 110, 90, 0.20), transparent 60%),
+    linear-gradient(160deg, #fbe4d8 0%, #fdf3ec 45%, #f8dccb 100%);
+  background-attachment: fixed;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-tap-highlight-color: transparent;
+}
+
+* {
+  -webkit-overflow-scrolling: touch;
+}
+
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+@layer utilities {
+  .ease-premium {
+    transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .shadow-premium-sm { box-shadow: var(--shadow-sm); }
+  .shadow-premium-md { box-shadow: var(--shadow-md); }
+  .shadow-premium-lg { box-shadow: var(--shadow-lg); }
+  .shadow-premium-glow { box-shadow: var(--shadow-glow); }
+
+  .surface-glass {
+    background: rgba(253, 243, 236, 0.78);
+    backdrop-filter: blur(14px) saturate(160%);
+    -webkit-backdrop-filter: blur(14px) saturate(160%);
+  }
+
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--ink-300);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--ink-500);
+}
