@@ -12,46 +12,6 @@ function todayStr(): string {
   return new Date().toISOString().split('T')[0];
 }
 
-// Resize + compress an image in the browser before upload.
-// A raw phone photo (3-8 MB) becomes a ~150-300kb JPEG, so every
-// card that later displays this photo loads fast on any connection.
-async function compressImage(file: File, maxDim = 1600, quality = 0.72): Promise<File> {
-  // Skip compression for already-small files or unsupported browsers
-  if (file.size < 250 * 1024) return file;
-
-  try {
-    const bitmap = await createImageBitmap(file);
-    let { width, height } = bitmap;
-
-    if (width > maxDim || height > maxDim) {
-      const scale = maxDim / Math.max(width, height);
-      width = Math.round(width * scale);
-      height = Math.round(height * scale);
-    }
-
-    const canvas = document.createElement('canvas');
-    canvas.width = width;
-    canvas.height = height;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return file;
-
-    ctx.drawImage(bitmap, 0, 0, width, height);
-
-    const blob: Blob = await new Promise((resolve, reject) => {
-      canvas.toBlob(
-        (b) => (b ? resolve(b) : reject(new Error('Compression failed'))),
-        'image/jpeg',
-        quality,
-      );
-    });
-
-    return new File([blob], file.name.replace(/\.\w+$/, '.jpg'), { type: 'image/jpeg' });
-  } catch {
-    // If compression fails for any reason, fall back to the original file
-    return file;
-  }
-}
-
 export function FabricFormModal({ fabric, onClose, onSaved }: Props) {
   const isEdit = !!fabric;
   const [form, setForm] = useState<FabricInsert>(() =>
@@ -82,6 +42,7 @@ export function FabricFormModal({ fabric, onClose, onSaved }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    // lock body scroll
     document.body.style.overflow = 'hidden';
     return () => {
       document.body.style.overflow = '';
@@ -92,12 +53,9 @@ export function FabricFormModal({ fabric, onClose, onSaved }: Props) {
     setUploading(true);
     setError(null);
     try {
-      const compressed = await compressImage(file);
-      const ext = compressed.name.split('.').pop() ?? 'jpg';
+      const ext = file.name.split('.').pop() ?? 'jpg';
       const path = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-      const { error: upErr } = await supabase.storage
-        .from('fabric-photos')
-        .upload(path, compressed, { cacheControl: '3600', upsert: false });
+      const { error: upErr } = await supabase.storage.from('fabric-photos').upload(path, file, { cacheControl: '3600', upsert: false });
       if (upErr) throw upErr;
       const { data: pub } = supabase.storage.from('fabric-photos').getPublicUrl(path);
       setForm((f) => ({ ...f, photo_url: pub.publicUrl }));
@@ -156,29 +114,19 @@ export function FabricFormModal({ fabric, onClose, onSaved }: Props) {
     }
   }
 
-  const inputCls =
-    'w-full rounded-xl border border-[var(--ink-300)]/70 bg-white px-3 py-2.5 text-sm text-[var(--ink-900)] placeholder-[var(--ink-500)]/70 outline-none transition-all duration-200 focus:border-[var(--ink-900)] focus:ring-1 focus:ring-[var(--ink-900)]';
-  const labelCls = 'mb-1.5 block text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--ink-500)]';
+  const inputCls = 'w-full rounded-lg border border-stone-300 bg-white px-3 py-2.5 text-sm text-stone-900 placeholder-stone-400 outline-none transition focus:border-stone-900 focus:ring-1 focus:ring-stone-900';
+  const labelCls = 'mb-1.5 block text-xs font-semibold uppercase tracking-wide text-stone-500';
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-[var(--ink-900)]/50 backdrop-blur-sm sm:items-center"
-      onClick={onClose}
-    >
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-stone-900/40 backdrop-blur-sm sm:items-center" onClick={onClose}>
       <div
-        className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-t-[24px] bg-[var(--surface)] p-5 shadow-premium-lg sm:rounded-[24px]"
+        className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-t-2xl bg-stone-50 p-5 shadow-2xl sm:rounded-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-bold tracking-tight text-[var(--ink-900)]">
-            {isEdit ? 'Edit Fabric' : 'Add Fabric'}
-          </h2>
-          <button
-            onClick={onClose}
-            className="rounded-full p-1.5 text-[var(--ink-500)] transition hover:bg-[var(--ink-900)]/[0.06]"
-            aria-label="Close"
-          >
+          <h2 className="text-lg font-bold text-stone-900">{isEdit ? 'Edit Fabric' : 'Add Fabric'}</h2>
+          <button onClick={onClose} className="rounded-full p-1.5 text-stone-500 hover:bg-stone-200" aria-label="Close">
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -187,19 +135,19 @@ export function FabricFormModal({ fabric, onClose, onSaved }: Props) {
         <div className="mb-4">
           <span className={labelCls}>Photo</span>
           <div className="flex items-center gap-3">
-            <div className="h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-[var(--ink-900)]/[0.05] ring-1 ring-[var(--hairline)]">
+            <div className="h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-stone-200 ring-1 ring-stone-300">
               {form.photo_url ? (
                 <img src={form.photo_url} alt="preview" className="h-full w-full object-cover" />
               ) : (
-                <div className="flex h-full w-full items-center justify-center text-[var(--ink-300)]">
+                <div className="flex h-full w-full items-center justify-center text-stone-400">
                   <Upload className="h-6 w-6" />
                 </div>
               )}
             </div>
-            <label className="cursor-pointer rounded-xl border border-[var(--ink-300)]/70 bg-white px-3 py-2 text-sm font-medium text-[var(--ink-700)] shadow-premium-sm transition hover:bg-[var(--ink-900)]/[0.03]">
+            <label className="cursor-pointer rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm font-medium text-stone-700 transition hover:bg-stone-100">
               {uploading ? (
                 <span className="flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin" /> Optimizing & uploading…
+                  <Loader2 className="h-4 w-4 animate-spin" /> Uploading…
                 </span>
               ) : (
                 'Choose Image'
@@ -216,9 +164,6 @@ export function FabricFormModal({ fabric, onClose, onSaved }: Props) {
               />
             </label>
           </div>
-          <p className="mt-1.5 text-[11px] text-[var(--ink-500)]">
-            Photos are auto-resized and compressed before upload for fast loading.
-          </p>
         </div>
 
         {/* Fabric Code */}
@@ -299,9 +244,7 @@ export function FabricFormModal({ fabric, onClose, onSaved }: Props) {
           />
         </div>
 
-        {error && (
-          <p className="mb-4 rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-700 ring-1 ring-rose-200/60">{error}</p>
-        )}
+        {error && <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
         {/* Actions */}
         <div className="flex items-center gap-3">
@@ -309,7 +252,7 @@ export function FabricFormModal({ fabric, onClose, onSaved }: Props) {
             <button
               onClick={handleDelete}
               disabled={saving}
-              className="flex items-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2.5 text-sm font-semibold text-rose-700 transition hover:bg-rose-100 disabled:opacity-50"
+              className="flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-sm font-semibold text-red-600 transition hover:bg-red-100 disabled:opacity-50"
             >
               <Trash2 className="h-4 w-4" /> Delete
             </button>
@@ -318,14 +261,14 @@ export function FabricFormModal({ fabric, onClose, onSaved }: Props) {
           <button
             onClick={onClose}
             disabled={saving}
-            className="rounded-xl border border-[var(--ink-300)]/70 bg-white px-4 py-2.5 text-sm font-semibold text-[var(--ink-700)] transition hover:bg-[var(--ink-900)]/[0.03] disabled:opacity-50"
+            className="rounded-lg border border-stone-300 bg-white px-4 py-2.5 text-sm font-semibold text-stone-600 transition hover:bg-stone-100 disabled:opacity-50"
           >
             Cancel
           </button>
           <button
             onClick={handleSave}
             disabled={saving || uploading}
-            className="flex items-center gap-2 rounded-xl bg-[var(--ink-900)] px-4 py-2.5 text-sm font-semibold text-white shadow-premium-sm transition hover:bg-[var(--ink-700)] disabled:opacity-50"
+            className="flex items-center gap-2 rounded-lg bg-stone-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-stone-800 disabled:opacity-50"
           >
             {saving && <Loader2 className="h-4 w-4 animate-spin" />}
             {isEdit ? 'Save' : 'Add'}

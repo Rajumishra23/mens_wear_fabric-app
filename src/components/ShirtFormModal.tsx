@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { X, Upload, Loader2, Trash2, Check } from 'lucide-react';
 import { supabase, type Shirt, type ShirtInsert, SHIRT_SIZES, LOCATIONS } from '../lib/supabase';
+import type { ActivityLogInsert } from '../lib/supabase';
 
 type Props = {
   shirt: Shirt | null; // null = adding new
@@ -91,6 +92,14 @@ export function ShirtFormModal({ shirt, category, onClose, onSaved }: Props) {
         };
         const { error: uErr } = await supabase.from('shirts').update(payload).eq('id', shirt.id);
         if (uErr) throw uErr;
+        const logEntry: ActivityLogInsert = {
+          shirt_id: shirt.id,
+          shirt_name: name.trim(),
+          size: shirt.size,
+          action: 'shirt_updated',
+          quantity: Number(availableQty) || 0,
+        };
+        await supabase.from('activity_log').insert(logEntry);
       } else {
         const rows: ShirtInsert[] = selectedSizes.map((s) => ({
           name: name.trim(),
@@ -102,8 +111,18 @@ export function ShirtFormModal({ shirt, category, onClose, onSaved }: Props) {
           location,
           last_updated: lastUpdated || todayStr(),
         }));
-        const { error: iErr } = await supabase.from('shirts').insert(rows);
+        const { data: inserted, error: iErr } = await supabase.from('shirts').insert(rows).select('id, size');
         if (iErr) throw iErr;
+        if (inserted) {
+          const logs: ActivityLogInsert[] = (inserted as { id: string; size: number }[]).map((row) => ({
+            shirt_id: row.id,
+            shirt_name: name.trim(),
+            size: row.size,
+            action: 'shirt_added',
+            quantity: Number(availableQty) || 0,
+          }));
+          await supabase.from('activity_log').insert(logs);
+        }
       }
       onSaved();
       onClose();
@@ -130,28 +149,20 @@ export function ShirtFormModal({ shirt, category, onClose, onSaved }: Props) {
     }
   }
 
-  const inputCls =
-    'w-full rounded-xl border border-[var(--ink-300)]/70 bg-white px-3 py-2.5 text-sm text-[var(--ink-900)] placeholder-[var(--ink-500)]/70 outline-none transition-all duration-200 focus:border-[var(--ink-900)] focus:ring-1 focus:ring-[var(--ink-900)]';
-  const labelCls = 'mb-1.5 block text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--ink-500)]';
+  const inputCls = 'w-full rounded-lg border border-stone-300 bg-white px-3 py-2.5 text-sm text-stone-900 placeholder-stone-400 outline-none transition focus:border-stone-900 focus:ring-1 focus:ring-stone-900';
+  const labelCls = 'mb-1.5 block text-xs font-semibold uppercase tracking-wide text-stone-500';
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-[var(--ink-900)]/50 backdrop-blur-sm sm:items-center"
-      onClick={onClose}
-    >
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-stone-900/40 backdrop-blur-sm sm:items-center" onClick={onClose}>
       <div
-        className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-t-[24px] bg-[var(--surface)] p-5 shadow-premium-lg sm:rounded-[24px]"
+        className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-t-2xl bg-stone-50 p-5 shadow-2xl sm:rounded-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-bold tracking-tight text-[var(--ink-900)]">
+          <h2 className="text-lg font-bold text-stone-900">
             {isEdit ? 'Edit Shirt' : `Add ${category === 'carton' ? 'Carton' : 'Product'} Shirt`}
           </h2>
-          <button
-            onClick={onClose}
-            className="rounded-full p-1.5 text-[var(--ink-500)] transition hover:bg-[var(--ink-900)]/[0.06]"
-            aria-label="Close"
-          >
+          <button onClick={onClose} className="rounded-full p-1.5 text-stone-500 hover:bg-stone-200" aria-label="Close">
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -160,16 +171,16 @@ export function ShirtFormModal({ shirt, category, onClose, onSaved }: Props) {
         <div className="mb-4">
           <span className={labelCls}>Photo</span>
           <div className="flex items-center gap-3">
-            <div className="h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-[var(--ink-900)]/[0.05] ring-1 ring-[var(--hairline)]">
+            <div className="h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-stone-200 ring-1 ring-stone-300">
               {photoUrl ? (
                 <img src={photoUrl} alt="preview" className="h-full w-full object-cover" />
               ) : (
-                <div className="flex h-full w-full items-center justify-center text-[var(--ink-300)]">
+                <div className="flex h-full w-full items-center justify-center text-stone-400">
                   <Upload className="h-6 w-6" />
                 </div>
               )}
             </div>
-            <label className="cursor-pointer rounded-xl border border-[var(--ink-300)]/70 bg-white px-3 py-2 text-sm font-medium text-[var(--ink-700)] shadow-premium-sm transition hover:bg-[var(--ink-900)]/[0.03]">
+            <label className="cursor-pointer rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm font-medium text-stone-700 transition hover:bg-stone-100">
               {uploading ? (
                 <span className="flex items-center gap-2">
                   <Loader2 className="h-4 w-4 animate-spin" /> Uploading…
@@ -210,10 +221,10 @@ export function ShirtFormModal({ shirt, category, onClose, onSaved }: Props) {
                   key={s}
                   type="button"
                   onClick={() => toggleSize(s)}
-                  className={`flex h-10 w-10 items-center justify-center rounded-lg text-sm font-semibold transition-all duration-200 ${
+                  className={`flex h-10 w-10 items-center justify-center rounded-lg text-sm font-semibold transition ${
                     active
-                      ? 'bg-[var(--ink-900)] text-white shadow-premium-sm'
-                      : 'bg-[var(--ink-900)]/[0.05] text-[var(--ink-700)] hover:bg-[var(--ink-900)]/[0.09]'
+                      ? 'bg-stone-900 text-white'
+                      : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
                   } ${isEdit ? 'cursor-default' : ''}`}
                 >
                   {active && !isEdit ? <Check className="h-4 w-4" /> : s}
@@ -222,7 +233,7 @@ export function ShirtFormModal({ shirt, category, onClose, onSaved }: Props) {
             })}
           </div>
           {!isEdit && selectedSizes.length > 0 && (
-            <p className="mt-2 text-xs text-[var(--ink-500)]">
+            <p className="mt-2 text-xs text-stone-500">
               Will add {selectedSizes.length} shirt{selectedSizes.length > 1 ? 's' : ''} (one per size)
             </p>
           )}
@@ -264,9 +275,7 @@ export function ShirtFormModal({ shirt, category, onClose, onSaved }: Props) {
           <input type="date" className={inputCls} value={lastUpdated} onChange={(e) => setLastUpdated(e.target.value)} />
         </div>
 
-        {error && (
-          <p className="mb-4 rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-700 ring-1 ring-rose-200/60">{error}</p>
-        )}
+        {error && <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
         {/* Actions */}
         <div className="flex items-center gap-3">
@@ -274,23 +283,19 @@ export function ShirtFormModal({ shirt, category, onClose, onSaved }: Props) {
             <button
               onClick={handleDelete}
               disabled={saving}
-              className="flex items-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2.5 text-sm font-semibold text-rose-700 transition hover:bg-rose-100 disabled:opacity-50"
+              className="flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-sm font-semibold text-red-600 transition hover:bg-red-100 disabled:opacity-50"
             >
               <Trash2 className="h-4 w-4" /> Delete
             </button>
           )}
           <div className="flex-1" />
-          <button
-            onClick={onClose}
-            disabled={saving}
-            className="rounded-xl border border-[var(--ink-300)]/70 bg-white px-4 py-2.5 text-sm font-semibold text-[var(--ink-700)] transition hover:bg-[var(--ink-900)]/[0.03] disabled:opacity-50"
-          >
+          <button onClick={onClose} disabled={saving} className="rounded-lg border border-stone-300 bg-white px-4 py-2.5 text-sm font-semibold text-stone-600 transition hover:bg-stone-100 disabled:opacity-50">
             Cancel
           </button>
           <button
             onClick={handleSave}
             disabled={saving || uploading}
-            className="flex items-center gap-2 rounded-xl bg-[var(--ink-900)] px-4 py-2.5 text-sm font-semibold text-white shadow-premium-sm transition hover:bg-[var(--ink-700)] disabled:opacity-50"
+            className="flex items-center gap-2 rounded-lg bg-stone-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-stone-800 disabled:opacity-50"
           >
             {saving && <Loader2 className="h-4 w-4 animate-spin" />}
             {isEdit ? 'Save' : 'Add'}

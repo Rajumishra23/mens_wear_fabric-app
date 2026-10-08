@@ -33,7 +33,7 @@ export type FabricInsert = {
 
 export type FabricUpdate = Partial<FabricInsert>;
 
-export const FABRIC_TYPES = ['Cotton', 'Linen', 'Silk', 'Rayon', 'Wool', 'Blend', 'TR', 'japanese', 'korean', 'velvet','jacquard'] as const;
+export const FABRIC_TYPES = ['Cotton', 'Linen', 'Silk', 'Rayon', 'Wool', 'Blend'] as const;
 export const LOCATIONS = ['Shop Floor', 'Office', 'Godown'] as const;
 
 export type Shirt = {
@@ -44,6 +44,8 @@ export type Shirt = {
   category: 'product' | 'carton';
   carton_no: string | null;
   available_qty: number;
+  order_qty: number;
+  salesman_name: string | null;
   location: string | null;
   last_updated: string;
   created_at: string;
@@ -56,6 +58,8 @@ export type ShirtInsert = {
   category: 'product' | 'carton';
   carton_no?: string | null;
   available_qty?: number;
+  order_qty?: number;
+  salesman_name?: string | null;
   location?: string | null;
   last_updated?: string;
 };
@@ -63,3 +67,23 @@ export type ShirtInsert = {
 export type ShirtUpdate = Partial<ShirtInsert>;
 
 export const SHIRT_SIZES = [30, 32, 34, 36, 38, 40, 42, 44, 46, 48, 50] as const;
+
+export type ActivityLog = {
+  id: string;
+  shirt_id: string | null;
+  shirt_name: string | null;
+  size: number | null;
+  action: string;
+  quantity: number;
+  salesman_name: string | null;
+  created_at: string;
+};
+
+export type ActivityLogInsert = {
+  shirt_id?: string | null;
+  shirt_name?: string | null;
+  size?: number | null;
+  action: string;
+  quantity?: number;
+  salesman_name?: string | null;
+};
