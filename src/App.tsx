@@ -11,6 +11,7 @@ import { OrderPopup } from './components/OrderPopup';
 import { NotificationBell } from './components/NotificationBell';
 import { OrdersView } from './components/OrdersView';
 import { supabase, type Fabric, type Shirt, SHIRT_SIZES } from './lib/supabase';
+import logo from './assets/klick.webp';
 
 type Category = 'fabric' | 'product' | 'carton';
 
@@ -156,18 +157,20 @@ function AppInner() {
 
   return (
     <div className="min-h-screen bg-stone-100 text-stone-900">
-      {/* Header */}
-      <header className="sticky top-0 z-30 border-b border-stone-200 bg-stone-50/95 backdrop-blur-md">
+     {/* Header */}
+      <header className="surface-glass sticky top-0 z-30 border-b border-[var(--hairline)]">
         <div className="mx-auto max-w-6xl px-4 py-3">
-          {/* Top row: logo + bell + role toggle */}
+          {/* Top row */}
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-stone-900 text-white">
-                <ShirtIcon className="h-5 w-5" />
-              </div>
+            <div className="flex items-center gap-2.5">
+              <img src={logo} alt="Klick Selections" className="h-16 w-16 object-contain" />
               <div>
-                <h1 className="text-base font-bold leading-tight text-stone-900">Menswear Inventory</h1>
-                <p className="text-[11px] leading-tight text-stone-500">Fabric · Product · Carton</p>
+                <h1 className="text-[15px] font-bold leading-tight tracking-tight text-[var(--ink-900)]">
+                  Klick Fabric Inventory
+                </h1>
+                <p className="text-[11px] leading-tight tracking-wide text-[var(--ink-500)]">
+                  Menswear Retail Tracker
+                </p>
               </div>
             </div>
             <div className="flex items-center gap-2">
