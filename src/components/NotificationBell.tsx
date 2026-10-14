@@ -73,7 +73,7 @@ export function NotificationBell({ refreshKey }: Props) {
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-11 z-50 max-h-[70vh] w-80 overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-stone-200">
+          <div className="absolute right-0 top-11 z-50 max-h-[70vh] w-[calc(100vw-2rem)] max-w-80 overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-stone-200 sm:right-0">
             <div className="flex items-center justify-between border-b border-stone-100 px-4 py-3">
               <h3 className="text-sm font-bold text-stone-900">Activity</h3>
               <button onClick={() => setOpen(false)} className="rounded-full p-1 text-stone-400 hover:bg-stone-100">

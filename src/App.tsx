@@ -1,5 +1,5 @@
 import { useMemo, useState, useCallback } from 'react';
-import { Search, Plus, SlidersHorizontal, X, Shirt as ShirtIcon, Eye, Pencil, Package, Check } from 'lucide-react';
+import { Search, Plus, SlidersHorizontal, X, Shirt as ShirtIcon, Eye, Pencil, Package, Check, ShoppingCart } from 'lucide-react';
 import { useFabrics } from './hooks/useFabrics';
 import { useShirts } from './hooks/useShirts';
 import { useRole, RoleProvider, type Role } from './lib/role-context';
@@ -9,8 +9,8 @@ import { ShirtCard, ShirtCardSkeleton } from './components/ShirtCard';
 import { ShirtFormModal } from './components/ShirtFormModal';
 import { OrderPopup } from './components/OrderPopup';
 import { NotificationBell } from './components/NotificationBell';
+import { OrdersView } from './components/OrdersView';
 import { supabase, type Fabric, type Shirt, SHIRT_SIZES } from './lib/supabase';
-import logo from './assets/klick.webp';
 
 type Category = 'fabric' | 'product' | 'carton';
 
@@ -39,6 +39,7 @@ function AppInner() {
 
   // Order popup state
   const [orderPopup, setOrderPopup] = useState<{ shirt: Shirt; newOrderQty: number } | null>(null);
+  const [showOrders, setShowOrders] = useState(false);
   const [activityRefreshKey, setActivityRefreshKey] = useState(0);
 
   const isShirtCategory = category === 'product' || category === 'carton';
@@ -146,22 +147,27 @@ function AppInner() {
     : filteredShirts.reduce((s, sh) => s + sh.available_qty, 0);
   const stockLabel = category === 'fabric' ? `${totalStock.toFixed(2)} mtr total` : `${totalStock} pcs total`;
 
+  // Count placed orders for product category
+  const placedOrders = category === 'product'
+    ? shirts.filter((s) => s.category === 'product' && s.order_qty > 0)
+    : [];
+  const placedOrdersCount = placedOrders.length;
+  const placedOrdersTotal = placedOrders.reduce((s, sh) => s + sh.order_qty, 0);
+
   return (
     <div className="min-h-screen bg-stone-100 text-stone-900">
       {/* Header */}
-      <header className="surface-glass sticky top-0 z-30 border-b border-[var(--hairline)]">
+      <header className="sticky top-0 z-30 border-b border-stone-200 bg-stone-50/95 backdrop-blur-md">
         <div className="mx-auto max-w-6xl px-4 py-3">
-          {/* Top row */}
+          {/* Top row: logo + bell + role toggle */}
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <img src={logo} alt="Klick Selections" className="h-16 w-16 object-contain" />
+            <div className="flex items-center gap-2">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-stone-900 text-white">
+                <ShirtIcon className="h-5 w-5" />
+              </div>
               <div>
-                <h1 className="text-[15px] font-bold leading-tight tracking-tight text-[var(--ink-900)]">
-                  Klick Fabric Inventory
-                </h1>
-                <p className="text-[11px] leading-tight tracking-wide text-[var(--ink-500)]">
-                  Menswear Retail Tracker
-                </p>
+                <h1 className="text-base font-bold leading-tight text-stone-900">Menswear Inventory</h1>
+                <p className="text-[11px] leading-tight text-stone-500">Fabric · Product · Carton</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -279,16 +285,30 @@ function AppInner() {
         </div>
       </header>
 
-      {/* Summary bar */}
+      {/* Summary bar + Orders button */}
       <div className="mx-auto max-w-6xl px-4 pt-4">
-        <div className="flex items-center justify-between rounded-xl bg-white px-4 py-3 shadow-sm ring-1 ring-stone-200/70">
-          <div className="flex items-center gap-2 text-sm text-stone-600">
-            <Package className="h-4 w-4 text-stone-400" />
-            <span><span className="font-bold text-stone-900">{totalCount}</span> items</span>
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center justify-between rounded-xl bg-white px-4 py-3 shadow-sm ring-1 ring-stone-200/70">
+            <div className="flex items-center gap-2 text-sm text-stone-600">
+              <Package className="h-4 w-4 text-stone-400" />
+              <span><span className="font-bold text-stone-900">{totalCount}</span> items</span>
+            </div>
+            <p className="ml-4 text-sm text-stone-600">
+              <span className="font-bold text-stone-900">{stockLabel}</span>
+            </p>
           </div>
-          <p className="text-sm text-stone-600">
-            <span className="font-bold text-stone-900">{stockLabel}</span>
-          </p>
+          {category === 'product' && placedOrdersCount > 0 && (
+            <button
+              onClick={() => setShowOrders(true)}
+              className="flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 active:scale-95"
+            >
+              <ShoppingCart className="h-4 w-4" />
+              <span>Orders</span>
+              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-white px-1 text-xs font-bold text-emerald-600">
+                {placedOrdersTotal}
+              </span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -373,6 +393,13 @@ function AppInner() {
       )}
       {editingShirt && (
         <ShirtFormModal shirt={editingShirt} category={editingShirt.category} onClose={() => setEditingShirt(null)} onSaved={() => { refetch(); setActivityRefreshKey((k) => k + 1); }} />
+      )}
+      {showOrders && (
+        <OrdersView
+          onClose={() => setShowOrders(false)}
+          onOrderChange={handleOrderChange}
+          refreshKey={activityRefreshKey}
+        />
       )}
       {orderPopup && (
         <OrderPopup
