@@ -1,16 +1,17 @@
 import { useEffect, useState } from 'react';
-import { X, ShoppingCart, Minus, Package, Loader2 } from 'lucide-react';
+import { X, ShoppingCart, Package, Loader2, StickyNote, Check } from 'lucide-react';
 import { supabase, type Shirt } from '../lib/supabase';
 
 type Props = {
   onClose: () => void;
-  onOrderChange: (shirt: Shirt, newOrderQty: number) => void;
   refreshKey: number;
 };
 
-export function OrdersView({ onClose, onOrderChange, refreshKey }: Props) {
+export function OrdersView({ onClose, refreshKey }: Props) {
   const [shirts, setShirts] = useState<Shirt[]>([]);
   const [loading, setLoading] = useState(true);
+  const [noteDrafts, setNoteDrafts] = useState<Record<string, string>>({});
+  const [savingNoteId, setSavingNoteId] = useState<string | null>(null);
 
   useEffect(() => {
     document.body.style.overflow = 'hidden';
@@ -27,7 +28,11 @@ export function OrdersView({ onClose, onOrderChange, refreshKey }: Props) {
         .gt('order_qty', 0)
         .order('name', { ascending: true });
       if (!cancelled && !error) {
-        setShirts((data ?? []) as Shirt[]);
+        const rows = (data ?? []) as Shirt[];
+        setShirts(rows);
+        const drafts: Record<string, string> = {};
+        for (const r of rows) drafts[r.id] = r.order_note ?? '';
+        setNoteDrafts(drafts);
       }
       if (!cancelled) setLoading(false);
     }
@@ -40,6 +45,23 @@ export function OrdersView({ onClose, onOrderChange, refreshKey }: Props) {
     (acc[s.name] ??= []).push(s);
     return acc;
   }, {});
+
+  async function saveNote(shirtId: string) {
+    const note = noteDrafts[shirtId]?.trim() ?? '';
+    setSavingNoteId(shirtId);
+    try {
+      const { error } = await supabase
+        .from('shirts')
+        .update({ order_note: note || null })
+        .eq('id', shirtId);
+      if (error) throw error;
+      setShirts((prev) => prev.map((s) => s.id === shirtId ? { ...s, order_note: note || null } : s));
+    } catch {
+      // ignore — keep draft so user can retry
+    } finally {
+      setSavingNoteId(null);
+    }
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-stone-900/40 backdrop-blur-sm sm:items-center" onClick={onClose}>
@@ -89,42 +111,69 @@ export function OrdersView({ onClose, onOrderChange, refreshKey }: Props) {
                   </div>
                   <div className="space-y-2">
                     {items.map((sh) => (
-                      <div key={sh.id} className="flex items-center gap-3 rounded-xl bg-white p-3 ring-1 ring-stone-200/70">
-                        {/* Photo */}
-                        <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-stone-100">
-                          {sh.photo_url ? (
-                            <img src={sh.photo_url} alt={sh.name} className="h-full w-full object-cover" />
-                          ) : (
-                            <div className="flex h-full w-full items-center justify-center text-stone-300">
-                              <Package className="h-5 w-5" />
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Info */}
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2">
-                            <span className="rounded-md bg-stone-100 px-1.5 py-0.5 text-xs font-bold text-stone-600">Size {sh.size}</span>
-                            <span className="text-sm font-semibold text-stone-900">{sh.order_qty} ordered</span>
-                          </div>
-                          <div className="mt-0.5 flex items-center gap-2 text-xs text-stone-500">
-                            <span>Avl: <span className="font-semibold text-stone-700">{sh.available_qty - sh.order_qty}</span></span>
-                            {sh.salesman_name && (
-                              <span className="flex items-center gap-1 text-emerald-600">
-                                · by {sh.salesman_name}
-                              </span>
+                      <div key={sh.id} className="rounded-xl bg-white p-3 ring-1 ring-stone-200/70">
+                        <div className="flex items-center gap-3">
+                          {/* Photo */}
+                          <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-stone-100">
+                            {sh.photo_url ? (
+                              <img src={sh.photo_url} alt={sh.name} className="h-full w-full object-cover" />
+                            ) : (
+                              <div className="flex h-full w-full items-center justify-center text-stone-300">
+                                <Package className="h-5 w-5" />
+                              </div>
                             )}
                           </div>
+
+                          {/* Info */}
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="rounded-md bg-stone-100 px-1.5 py-0.5 text-xs font-bold text-stone-600">Size {sh.size}</span>
+                              <span className="text-sm font-semibold text-stone-900">{sh.order_qty} ordered</span>
+                            </div>
+                            <div className="mt-0.5 flex items-center gap-2 text-xs text-stone-500">
+                              <span>Avl: <span className="font-semibold text-stone-700">{sh.available_qty - sh.order_qty}</span></span>
+                              {sh.salesman_name && (
+                                <span className="flex items-center gap-1 text-emerald-600">
+                                  · by {sh.salesman_name}
+                                </span>
+                              )}
+                            </div>
+                          </div>
                         </div>
 
-                        {/* Decrease button */}
-                        <button
-                          onClick={() => onOrderChange(sh, Math.max(0, sh.order_qty - 1))}
-                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-red-50 text-red-500 ring-1 ring-red-200 transition hover:bg-red-100 active:scale-90"
-                          aria-label="Remove order"
-                        >
-                          <Minus className="h-4 w-4" />
-                        </button>
+                        {/* Note field */}
+                        <div className="mt-2.5 border-t border-stone-100 pt-2.5">
+                          <div className="mb-1 flex items-center gap-1.5">
+                            <StickyNote className="h-3.5 w-3.5 text-amber-500" />
+                            <span className="text-[11px] font-semibold uppercase tracking-wide text-stone-400">Note</span>
+                          </div>
+                          <div className="flex items-start gap-2">
+                            <textarea
+                              value={noteDrafts[sh.id] ?? ''}
+                              onChange={(e) => setNoteDrafts((prev) => ({ ...prev, [sh.id]: e.target.value }))}
+                              placeholder="Write a note for this order…"
+                              rows={2}
+                              className="flex-1 resize-none rounded-lg border border-stone-200 bg-stone-50 px-2.5 py-2 text-xs text-stone-800 placeholder-stone-400 outline-none transition focus:border-stone-400 focus:bg-white focus:ring-1 focus:ring-stone-400"
+                            />
+                            <button
+                              onClick={() => saveNote(sh.id)}
+                              disabled={savingNoteId === sh.id}
+                              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-stone-900 text-white transition hover:bg-stone-800 active:scale-90 disabled:opacity-50"
+                              aria-label="Save note"
+                            >
+                              {savingNoteId === sh.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Check className="h-4 w-4" />
+                              )}
+                            </button>
+                          </div>
+                          {sh.order_note && (
+                            <p className="mt-1.5 rounded-md bg-amber-50 px-2 py-1 text-xs text-amber-700">
+                              {sh.order_note}
+                            </p>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>

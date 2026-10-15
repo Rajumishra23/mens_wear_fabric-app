@@ -157,7 +157,7 @@ function AppInner() {
 
   return (
     <div className="min-h-screen bg-stone-100 text-stone-900">
-     {/* Header */}
+      {/* Header */}
       <header className="surface-glass sticky top-0 z-30 border-b border-[var(--hairline)]">
         <div className="mx-auto max-w-6xl px-4 py-3">
           {/* Top row */}
@@ -178,7 +178,6 @@ function AppInner() {
               <RoleToggle role={role} setRole={setRole} />
             </div>
           </div>
-
           {/* Category tabs */}
           <div className="mt-3 flex gap-1.5">
             <CategoryTab active={category === 'fabric'} onClick={() => switchCategory('fabric')} icon={<Package className="h-4 w-4" />}>
@@ -400,7 +399,6 @@ function AppInner() {
       {showOrders && (
         <OrdersView
           onClose={() => setShowOrders(false)}
-          onOrderChange={handleOrderChange}
           refreshKey={activityRefreshKey}
         />
       )}

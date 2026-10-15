@@ -46,6 +46,7 @@ export type Shirt = {
   available_qty: number;
   order_qty: number;
   salesman_name: string | null;
+  order_note: string | null;
   location: string | null;
   last_updated: string;
   created_at: string;
@@ -60,6 +61,7 @@ export type ShirtInsert = {
   available_qty?: number;
   order_qty?: number;
   salesman_name?: string | null;
+  order_note?: string | null;
   location?: string | null;
   last_updated?: string;
 };
